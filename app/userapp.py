@@ -40,7 +40,7 @@ def register():
     # db.session.commit()
     return UserSchema(exclude=["password"]).jsonify(user),HTTPStatus.OK
 
-@app.route('/users/<int:id>/books', methods=["POST"])
+@app.route('/users/<int:id>/books', methods=["POST"]) # TODO olmuyan book elave elemeeee!!! FIXME
 def create_user_books(id):
     user = User.query.get(id)
     if user:
@@ -53,6 +53,16 @@ def create_user_books(id):
             return jsonify(msg="OK"),HTTPStatus.OK
 
     return jsonify(msg="User or book not found"),HTTPStatus.NOT_FOUND
+
+@app.route("/users/<int:id>/books/<int:book_id>", methods=["DELETE"])
+def delete_book(id,book_id):
+    # user = User.query.get()
+    user_books = UserBooks.query.filter_by(user_id=id,book_id=book_id).first()
+    if user_books:
+        user_books.delete_from_db()
+        return jsonify(msg="Success"),HTTPStatus.OK
+
+    return jsonify(msg="Book or user not found"),HTTPStatus.NOT_FOUND
 
 
 
@@ -75,7 +85,7 @@ def get_id(id):
             return jsonify(data),HTTPStatus.OK
 
                 
-        return UserSchema().jsonify(user),HTTPStatus.OK
+        return UserSchema(exclude=["password"]).jsonify(user),HTTPStatus.OK
 
     return jsonify(msg="User not found"),HTTPStatus.NOT_FOUND
 
