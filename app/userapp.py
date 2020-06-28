@@ -9,6 +9,7 @@ import requests
     
 
 app = create_app()
+
 #CREATE USER
 
 @app.route('/users', methods=["POST"])
@@ -40,6 +41,8 @@ def register():
     # db.session.commit()
     return UserSchema(exclude=["password"]).jsonify(user),HTTPStatus.OK
 
+#CREATE BOOK FOR USER
+
 @app.route('/users/<int:id>/books', methods=["POST"]) # TODO olmuyan book elave elemeeee!!! FIXME
 def create_user_books(id):
     user = User.query.get(id)
@@ -53,6 +56,8 @@ def create_user_books(id):
             return jsonify(msg="OK"),HTTPStatus.OK
 
     return jsonify(msg="User or book not found"),HTTPStatus.NOT_FOUND
+
+#DELETE USERS BOOK
 
 @app.route("/users/<int:id>/books/<int:book_id>", methods=["DELETE"])
 def delete_book(id,book_id):
@@ -68,6 +73,7 @@ def delete_book(id,book_id):
 
 
 # READ USER
+
 @app.route('/users/<int:id>', methods=["GET"])
 def get_id(id):
     user = User.query.filter_by(id=id).first()
@@ -89,20 +95,28 @@ def get_id(id):
 
     return jsonify(msg="User not found"),HTTPStatus.NOT_FOUND
 
+# GET USERS BOOK
+
 @app.route('/users', methods=["GET"])
 def get_all():
-    user = User.query.all()
+    all_user = User.query.all()
+    temp=[]
+    for user  in all_user:
+        users_book = UserBooks.query.filter_by(user_id=user.id).all()
+        schema = UserSchema()
+        data_schema = schema.dump(user)
+        data_schema["book_info"]=[]
+        if users_book:  
+            for book in users_book:
+                response = requests.get(f"http://127.0.0.1:5002/books/{book.book_id}")
+                if response.status_code == 200:
+                    data_schema["book_info"].append(response.json())                   
+        temp.append(data_schema)
 
-    # temp = []
-    # for i in user:
-    #     temp.append({
-    #         "name" : i.name,
-    #         "surname": i.surname,
-    #         "email": i.email,
-    #         "password": i.password
-    #     })
-
-    return UserSchema().jsonify(user,many=True),HTTPStatus.OK   
+    
+    return jsonify(temp),HTTPStatus.OK 
+    
+    # return UserSchema(exclude=["password"]).jsonify( all_user,many=True),HTTPStatus.OK   
 
 #DELETE USER
 
@@ -136,6 +150,28 @@ def update(id):
     return jsonify(msg="User not found"),HTTPStatus.NOT_FOUND
 
 
+# UPDATE BOOK
+
+@app.route("/users/<int:id>/books/<int:book_id>", methods=["PUT"])
+def update_book(id, book_id):
+    user_books = UserBooks.query.filter_by(user_id=id, book_id=book_id).first()
+    if user_books:
+        print(user_books)
+        new_book = request.get_json()
+        if new_book.get("new_book_id"):
+            response = requests.get(f"http://127.0.0.1:5002/books/{new_book.get('new_book_id')}")
+            print(response.json())
+            if response.status_code == 200:
+                book_dict = {
+                    "book_id":new_book.get("new_book_id")
+
+                }
+                user_books.update_db(**book_dict)
+                return jsonify(msg="OK"),HTTPStatus.OK
+
+                # user_books.update_db(book_id=new_book.get("new_book_id"))
+
+    return jsonify(msg="Not found"),HTTPStatus.NOT_FOUND
 
 
 # CREATE FILE
